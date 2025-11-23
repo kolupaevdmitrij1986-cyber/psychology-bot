@@ -1,0 +1,77 @@
+import os
+import logging
+from telebot import TeleBot, types
+
+# Настройки для Railway
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
+ADMIN_ID = os.environ.get('ADMIN_ID', 'Mr_Scrooge_1986')
+
+bot = TeleBot(BOT_TOKEN)
+
+print("🚀 Инициализация психолог-бота...")
+
+class PsychologyBot:
+    def __init__(self):
+        self.responses = {
+            'crisis': "🚨 Ваша жизнь важна! Телефон доверия: 8-800-2000-122",
+            'anxiety': "Понимаю тревогу. Дышите глубоко: вдох 4 сек, пауза 4, выдох 6. Что именно беспокоит?",
+            'depression': "Чувство подавленности тяжело. Что обычно помогает вам?",
+            'relationships': "Отношения требуют понимания. Используйте 'Я-сообщения' для выражения чувств.",
+            'default': "Спасибо, что делитесь. Расскажите подробнее о ваших переживаниях?"
+        }
+    
+    def get_response(self, message):
+        msg_lower = message.lower()
+        
+        if any(word in msg_lower for word in ['суицид', 'самоубийство', 'покончить']):
+            return self.responses['crisis']
+        elif any(word in msg_lower for word in ['тревож', 'страх', 'боюсь', 'паник']):
+            return self.responses['anxiety']
+        elif any(word in msg_lower for word in ['грустно', 'подавлен', 'депресси', 'тоск']):
+            return self.responses['depression']
+        elif any(word in msg_lower for word in ['отношен', 'парень', 'девушка', 'семь']):
+            return self.responses['relationships']
+        else:
+            return self.responses['default']
+
+psych_bot = PsychologyBot()
+
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    text = """🧠 Добро пожаловать в психологическую поддержку!
+
+Я ваш AI-психолог. Готов выслушать и поддержать.
+
+Просто напишите о том, что вас беспокоит..."""
+    
+    bot.send_message(message.chat.id, text)
+    print(f"👤 Новый пользователь: {message.from_user.username}")
+
+@bot.message_handler(commands=['help'])
+def send_help(message):
+    help_text = """💫 Я здесь чтобы:
+• Выслушать и поддержать
+• Помочь разобраться в чувствах
+• Предложить техники самопомощи
+
+Напишите о своих переживаниях - я готов помочь!"""
+    
+    bot.send_message(message.chat.id, help_text)
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    print(f"💬 Сообщение от {message.from_user.username}: {message.text}")
+    response = psych_bot.get_response(message.text)
+    bot.send_message(message.chat.id, response)
+
+if __name__ == "__main__":
+    print("✅ Бот инициализирован")
+    print("🤖 Запускаю поллинг...")
+    
+    try:
+        bot.infinity_polling()
+    except Exception as e:
+        print(f"❌ Критическая ошибка: {e}")
